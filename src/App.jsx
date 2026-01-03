@@ -17,7 +17,7 @@ import {
 const APP_NAME = "HackwithMumbai2.0";
 const TARGET_DATE = new Date("2026-02-07T00:00:00");
 const REG_FEE = 2000;
-const RAZORPAY_KEY_ID = "rzp_test_1DP5mmOlF5G5ag";
+const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_RyEAE0jIXPrkrw";
 
 // --- UTILS ---
 const loadScript = (src) => {
@@ -28,6 +28,14 @@ const loadScript = (src) => {
         script.onerror = () => resolve(false);
         document.body.appendChild(script);
     });
+};
+
+// --- PRICING UTILS ---
+const PRICE_PER_MEMBER = 500;
+
+const calculateRegistrationFee = (teamSize) => {
+    // 500 per team member: 1->500, 2->1000, 3->1500, 4->2000
+    return teamSize * PRICE_PER_MEMBER;
 };
 
 // --- ARCHIVE DATA ---
@@ -655,13 +663,6 @@ export default function App() {
         paymentId: ''
     });
 
-    // --- MOCK DATA ---
-    const MOCK_REGISTRATIONS = [
-        { id: '1', teamName: 'CyberPunks', leader: { name: 'Aryan Sharma', email: 'aryan@example.com', mobile: '9876543210' }, teamSize: 4, payment: { status: 'SUCCESS' } },
-        { id: '2', teamName: 'NeonNinjas', leader: { name: 'Sneha Patel', email: 'sneha@example.com', mobile: '9123456780' }, teamSize: 3, payment: { status: 'SUCCESS' } },
-        { id: '3', teamName: 'GlitchSquad', leader: { name: 'Rohan Gupta', email: 'rohan@example.com', mobile: '9988776655' }, teamSize: 4, payment: { status: 'SUCCESS' } }
-    ];
-
     // --- MOCK INITIALIZATION ---
     useEffect(() => {
         // Simulate checking auth state
@@ -670,11 +671,34 @@ export default function App() {
         }, 1000);
     }, []);
 
-    // --- REALTIME DATA (MOCKED) ---
+    // --- REALTIME DATA (FROM BACKEND) ---
     useEffect(() => {
         if (!adminAuth.isAuthenticated) return;
-        // Load mock data when admin is authenticated
-        setRegistrations(MOCK_REGISTRATIONS);
+        
+        // Fetch registrations from backend
+        const fetchRegistrations = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/api/registrations');
+                if (response.ok) {
+                    const data = await response.json();
+                    setRegistrations(data);
+                } else {
+                    console.error('Failed to fetch registrations');
+                    // No registrations if backend fails
+                    setRegistrations([]);
+                }
+            } catch (error) {
+                console.error('Error fetching registrations:', error);
+                // No registrations if backend is not running
+                setRegistrations([]);
+            }
+        };
+        
+        fetchRegistrations();
+        
+        // Refresh every 5 seconds to see new registrations
+        const interval = setInterval(fetchRegistrations, 5000);
+        return () => clearInterval(interval);
     }, [adminAuth.isAuthenticated]);
 
     const handleNextStep = () => {
@@ -682,13 +706,236 @@ export default function App() {
         else handlePayment();
     };
 
+    const downloadRegistrationsCSV = () => {
+        if (registrations.length === 0) {
+            alert("No registrations to download");
+            return;
+        }
+
+        // Prepare CSV headers
+        const headers = [
+            'Squad ID',
+            'Squad Name',
+            'Leader Name',
+            'Leader Email',
+            'Leader Mobile',
+            'Leader Education',
+            'Leader City',
+            'Team Size',
+            'Member 1 Name',
+            'Member 1 Email',
+            'Member 1 Mobile',
+            'Member 1 Education',
+            'Member 2 Name',
+            'Member 2 Email',
+            'Member 2 Mobile',
+            'Member 2 Education',
+            'Member 3 Name',
+            'Member 3 Email',
+            'Member 3 Mobile',
+            'Member 3 Education',
+            'Payment Status',
+            'Order ID',
+            'Payment ID',
+            'Amount Paid (INR)',
+            'Payment Date'
+        ];
+
+        // Prepare CSV rows
+        const rows = registrations.map(r => [
+            r.id || '',
+            r.teamName || '',
+            r.leader?.name || '',
+            r.leader?.email || '',
+            r.leader?.mobile || '',
+            r.leader?.education || '',
+            r.leader?.city || '',
+            r.teamSize || '',
+            r.members?.[0]?.name || '',
+            r.members?.[0]?.email || '',
+            r.members?.[0]?.mobile || '',
+            r.members?.[0]?.education || '',
+            r.members?.[1]?.name || '',
+            r.members?.[1]?.email || '',
+            r.members?.[1]?.mobile || '',
+            r.members?.[1]?.education || '',
+            r.members?.[2]?.name || '',
+            r.members?.[2]?.email || '',
+            r.members?.[2]?.mobile || '',
+            r.members?.[2]?.education || '',
+            r.payment?.status || 'PENDING',
+            r.payment?.orderId || '',
+            r.payment?.paymentId || '',
+            r.payment?.amount ? (r.payment.amount / 100).toFixed(2) : '0.00',
+            r.payment?.timestamp ? new Date(r.payment.timestamp).toLocaleDateString() : ''
+        ]);
+
+        // Combine headers and rows
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => {
+                // Escape quotes and wrap cells with commas in quotes
+                const cellStr = String(cell).replace(/"/g, '""');
+                return cellStr.includes(',') ? `"${cellStr}"` : cellStr;
+            }).join(','))
+        ].join('\n');
+
+        // Create blob and download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        const timestamp = new Date().toISOString().slice(0, 10);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `HackWithMumbai_Registrations_${timestamp}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const handlePayment = async () => {
         setLoading(true);
-        // Simulate Payment Delay
-        setTimeout(() => {
-            const mockPaymentId = "pay_mock_" + Math.random().toString(36).substr(2, 9);
-            saveRegistration(mockPaymentId);
-        }, 2000);
+        try {
+            // Validate required fields
+            if (!formData.teamName || !formData.teamName.trim()) {
+                alert("❌ Please enter a team name");
+                setLoading(false);
+                return;
+            }
+            
+            if (!formData.leader.email || !formData.leader.email.trim()) {
+                alert("❌ Please enter leader email");
+                setLoading(false);
+                return;
+            }
+            
+            if (!formData.leader.name || !formData.leader.name.trim()) {
+                alert("❌ Please enter leader name");
+                setLoading(false);
+                return;
+            }
+            
+            // Load Razorpay script
+            const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
+            
+            if (!res) {
+                alert("Failed to load Razorpay. Please try again.");
+                setLoading(false);
+                return;
+            }
+
+            // Calculate amount based on team size
+            const amount = calculateRegistrationFee(formData.teamSize);
+            
+            // Create order from backend
+            let orderResponse;
+            try {
+                orderResponse = await fetch('http://localhost:5000/api/create-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount,
+                        teamName: formData.teamName,
+                        teamSize: formData.teamSize,
+                        leaderEmail: formData.leader.email
+                    })
+                });
+            } catch (fetchError) {
+                console.error("Fetch error:", fetchError);
+                alert('❌ Backend server not running! Please start the server with: npm run server');
+                setLoading(false);
+                return;
+            }
+
+            if (!orderResponse.ok) {
+                const errorText = await orderResponse.text();
+                console.error('Order response error:', errorText);
+                alert(`Server error: ${orderResponse.status} ${orderResponse.statusText}`);
+                setLoading(false);
+                return;
+            }
+
+            const orderData = await orderResponse.json();
+
+            if (!orderData.success) {
+                console.error('Order creation failed:', orderData);
+                alert('Failed to create payment order: ' + (orderData.error || 'Unknown error'));
+                setLoading(false);
+                return;
+            }
+
+            console.log('Order created:', orderData);
+
+            // Razorpay options
+            const options = {
+                key: RAZORPAY_KEY_ID,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: "HackwithMumbai 2.0",
+                description: `Registration Fee - ${formData.teamName} (${formData.teamSize} Members)`,
+                order_id: orderData.orderId,
+                prefill: {
+                    name: formData.leader.name,
+                    email: formData.leader.email,
+                    contact: formData.leader.mobile
+                },
+                theme: {
+                    color: dimension === 'rift' ? '#dc2626' : '#06b6d4'
+                },
+                handler: async (response) => {
+                    // Verify payment on backend
+                    try {
+                        const verifyResponse = await fetch('http://localhost:5000/api/verify-payment', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                registrationData: formData
+                            })
+                        });
+
+                        const verifyData = await verifyResponse.json();
+
+                        if (verifyData.success) {
+                            // Payment successful
+                            console.log("Payment verified:", verifyData);
+                            await saveRegistration(response.razorpay_payment_id);
+                        } else {
+                            console.error('Verification failed:', verifyData);
+                            alert('Payment verification failed: ' + (verifyData.error || 'Unknown error'));
+                            setLoading(false);
+                        }
+                    } catch (error) {
+                        console.error("Verification error:", error);
+                        alert('Payment verification failed: ' + error.message);
+                        setLoading(false);
+                    }
+                },
+                modal: {
+                    ondismiss: () => {
+                        console.log("Payment cancelled");
+                        setLoading(false);
+                    }
+                }
+            };
+
+            // Open Razorpay checkout
+            const paymentObject = new window.Razorpay(options);
+            paymentObject.open();
+            setLoading(false);
+        } catch (error) {
+            console.error("Payment error:", error);
+            alert("Payment process failed: " + error.message);
+            setLoading(false);
+        }
     };
 
     const saveRegistration = async (paymentId) => {
@@ -1048,6 +1295,26 @@ export default function App() {
                                             </div>
                                         </div>
 
+                                        <div className="space-y-1">
+                                            <label className={`text-[9px] font-bold uppercase tracking-widest ${theme.colors.accent}`}>Team Size</label>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-3">
+                                                    <button onClick={() => setFormData({ ...formData, teamSize: Math.max(1, formData.teamSize - 1) })} className={`p-2 border ${theme.colors.border} bg-white/5 hover:bg-${theme.colors.primary}/20 transition-colors`}>
+                                                        <Minus className="w-4 h-4" />
+                                                    </button>
+                                                    <span className={`text-2xl font-black ${theme.fonts.head} w-12 text-center`}>{formData.teamSize}</span>
+                                                    <button onClick={() => setFormData({ ...formData, teamSize: Math.min(4, formData.teamSize + 1) })} className={`p-2 border ${theme.colors.border} bg-white/5 hover:bg-${theme.colors.primary}/20 transition-colors`}>
+                                                        <Plus className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                                <div className={`flex-1 p-3 bg-${theme.colors.primary}/10 border border-${theme.colors.primary}/50 rounded`}>
+                                                    <div className={`text-[10px] uppercase tracking-widest ${theme.colors.accent} font-bold mb-1`}>Registration Fee</div>
+                                                    <div className="text-2xl font-black text-white">₹{calculateRegistrationFee(formData.teamSize)}</div>
+                                                    <div className="text-[8px] text-white/60 mt-1">₹500 per member</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div className={`space-y-4 pt-4 border-t ${theme.colors.border}`}>
                                             <p className="text-[10px] font-bold uppercase text-white tracking-widest">Leader Details</p>
                                             <div className="grid md:grid-cols-2 gap-4">
@@ -1088,10 +1355,25 @@ export default function App() {
                                             ))}
                                         </div>
 
+                                        {regStep === 4 && (
+                                            <div className={`p-4 bg-${theme.colors.primary}/10 border border-${theme.colors.primary}/50 rounded mt-4`}>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <div className={`text-[9px] uppercase tracking-widest ${theme.colors.accent} font-bold mb-1`}>Team Size</div>
+                                                        <div className="text-xl font-black text-white">{formData.teamSize} Members</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className={`text-[9px] uppercase tracking-widest ${theme.colors.accent} font-bold mb-1`}>Total Fee</div>
+                                                        <div className="text-2xl font-black text-white">₹{calculateRegistrationFee(formData.teamSize)}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <div className="flex justify-between pt-4">
                                             <button onClick={() => setRegStep(p => p - 1)} className={`${theme.colors.accent} hover:text-white uppercase font-bold text-xs tracking-widest`}>Back</button>
                                             <ThemeButton theme={theme} onClick={handleNextStep} disabled={loading}>
-                                                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : (regStep === 4 ? 'Pay Registration Fee' : 'Next Member')}
+                                                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : (regStep === 4 ? <><CreditCard className="w-4 h-4" /> Pay ₹{calculateRegistrationFee(formData.teamSize)}</> : 'Next Member')}
                                             </ThemeButton>
                                         </div>
                                     </div>
@@ -1134,46 +1416,143 @@ export default function App() {
 
                 {/* ADMIN DASHBOARD */}
                 {view === 'admin' && (
-                    <motion.div className="pt-24 px-6 max-w-7xl mx-auto min-h-screen relative z-10">
-                        <div className="flex justify-between items-end mb-10">
+                    <motion.div className="pt-24 px-6 max-w-7xl mx-auto min-h-screen relative z-10 pb-10">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
                             <div>
-                                <h2 className={`text-3xl font-black text-white uppercase ${theme.fonts.head}`}>Dashboard</h2>
-                                <p className={`${theme.colors.accent} text-[10px] font-bold uppercase tracking-widest mt-2`}>{registrations.length} Active Squads</p>
+                                <h2 className={`text-3xl font-black text-white uppercase ${theme.fonts.head}`}>Command Center</h2>
+                                <p className={`${theme.colors.accent} text-[10px] font-bold uppercase tracking-widest mt-2`}>{registrations.length} Registered Squads</p>
                             </div>
-                            <button onClick={() => setView('home')} className={`${theme.colors.accent} font-bold uppercase text-[10px] tracking-widest hover:text-white`}>Logout</button>
+                            <div className="flex gap-3 w-full md:w-auto">
+                                <button 
+                                    onClick={downloadRegistrationsCSV} 
+                                    disabled={registrations.length === 0}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-all ${registrations.length === 0 ? 'opacity-50 cursor-not-allowed bg-white/5' : 'bg-green-900/30 border border-green-900/50 text-green-400 hover:bg-green-900/50'}`}
+                                >
+                                    <FileDown className="w-4 h-4" /> Download CSV
+                                </button>
+                                <button 
+                                    onClick={() => { setAdminAuth({ email: '', pass: '', isAuthenticated: false }); setView('home'); }} 
+                                    className={`${theme.colors.accent} font-bold uppercase text-[10px] tracking-widest hover:text-white px-4 py-2`}
+                                >
+                                    Logout
+                                </button>
+                            </div>
                         </div>
 
-                        <div className={`border ${theme.colors.border} bg-black/60 backdrop-blur-md overflow-x-auto`}>
-                            <table className="w-full text-left">
-                                <thead className={`bg-white/5 ${theme.colors.accent} text-[10px] uppercase font-bold tracking-widest`}>
-                                    <tr>
-                                        <th className="p-4">Squad Name</th>
-                                        <th className="p-4">Leader</th>
-                                        <th className="p-4">Contact</th>
-                                        <th className="p-4">Size</th>
-                                        <th className="p-4">Payment</th>
-                                    </tr>
-                                </thead>
-                                <tbody className={`divide-y ${theme.colors.border}`}>
-                                    {registrations.map(r => (
-                                        <tr key={r.id} className="text-xs opacity-80 hover:bg-white/5 transition-colors">
-                                            <td className="p-4 font-bold">{r.teamName}</td>
-                                            <td className="p-4">
-                                                <div className="font-bold text-white">{r.leader?.name}</div>
-                                                <div className="text-[10px] opacity-60">{r.leader?.email}</div>
-                                            </td>
-                                            <td className="p-4 font-mono text-[10px]">{r.leader?.mobile}</td>
-                                            <td className="p-4 text-center">{r.teamSize}</td>
-                                            <td className="p-4">
-                                                <span className="px-2 py-1 bg-green-900/20 text-green-500 border border-green-900/50 text-[9px] uppercase font-bold tracking-widest rounded">
-                                                    {r.payment?.status}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        {registrations.length === 0 ? (
+                            <div className={`border ${theme.colors.border} bg-black/60 backdrop-blur-md p-8 text-center`}>
+                                <p className="text-white/60 text-sm">No registrations yet. Waiting for squads to join...</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {registrations.map(r => (
+                                    <motion.div key={r.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`border ${theme.colors.border} bg-black/40 backdrop-blur-md hover:bg-black/60 transition-all duration-300`}>
+                                        <div className="p-6">
+                                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                                                <div>
+                                                    <p className={`text-[9px] ${theme.colors.accent} uppercase font-bold tracking-widest mb-1`}>Squad</p>
+                                                    <p className="text-white font-bold text-sm">{r.teamName}</p>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-[9px] ${theme.colors.accent} uppercase font-bold tracking-widest mb-1`}>Leader</p>
+                                                    <p className="text-white font-bold text-sm">{r.leader?.name}</p>
+                                                    <p className="text-[10px] text-white/60">{r.leader?.email}</p>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-[9px] ${theme.colors.accent} uppercase font-bold tracking-widest mb-1`}>Size</p>
+                                                    <p className="text-white font-bold text-sm">{r.teamSize} Members</p>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-[9px] ${theme.colors.accent} uppercase font-bold tracking-widest mb-1`}>Contact</p>
+                                                    <p className="text-white font-mono text-xs">{r.leader?.mobile}</p>
+                                                </div>
+                                                <div>
+                                                    <p className={`text-[9px] ${theme.colors.accent} uppercase font-bold tracking-widest mb-1`}>Payment Status</p>
+                                                    <span className="inline-block px-2 py-1 bg-green-900/20 text-green-500 border border-green-900/50 text-[9px] uppercase font-bold tracking-widest rounded">
+                                                        {r.payment?.status || 'PENDING'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="border-t border-white/10 pt-4 mt-4">
+                                                <h4 className={`text-[9px] ${theme.colors.accent} uppercase font-bold tracking-widest mb-3`}>Registration Details</h4>
+                                                
+                                                {/* Leader Details */}
+                                                <div className="bg-black/50 p-4 rounded mb-4">
+                                                    <h5 className="text-white font-bold text-sm mb-2">Team Leader</h5>
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-white/80">
+                                                        <div>
+                                                            <p className="text-[9px] opacity-60 mb-1">Name</p>
+                                                            <p className="font-mono">{r.leader?.name}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] opacity-60 mb-1">Email</p>
+                                                            <p className="font-mono text-[10px]">{r.leader?.email}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] opacity-60 mb-1">Mobile</p>
+                                                            <p className="font-mono">{r.leader?.mobile}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] opacity-60 mb-1">Education</p>
+                                                            <p className="font-mono">{r.leader?.education}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] opacity-60 mb-1">City</p>
+                                                            <p className="font-mono">{r.leader?.city}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Team Members */}
+                                                {r.members && r.members.length > 0 && (
+                                                    <div className="bg-black/50 p-4 rounded mb-4">
+                                                        <h5 className="text-white font-bold text-sm mb-3">Team Members</h5>
+                                                        <div className="space-y-3">
+                                                            {r.members.map((member, idx) => (
+                                                                <div key={idx} className="border-l-2 border-cyan-500/30 pl-3 text-xs text-white/80">
+                                                                    <p className="font-bold text-white">Member {idx + 1}: {member?.name}</p>
+                                                                    <div className="grid grid-cols-2 gap-2 mt-1 text-[10px]">
+                                                                        <div><span className="opacity-60">Email:</span> {member?.email}</div>
+                                                                        <div><span className="opacity-60">Mobile:</span> {member?.mobile}</div>
+                                                                        <div><span className="opacity-60">Education:</span> {member?.education}</div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Payment Details */}
+                                                {r.payment && (
+                                                    <div className="bg-green-900/10 border border-green-900/30 p-4 rounded">
+                                                        <h5 className="text-green-500 font-bold text-sm mb-3">Payment Proof</h5>
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-white/80">
+                                                            <div>
+                                                                <p className="text-[9px] opacity-60 mb-1">Order ID</p>
+                                                                <p className="font-mono text-[10px] break-all">{r.payment?.orderId}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[9px] opacity-60 mb-1">Payment ID</p>
+                                                                <p className="font-mono text-[10px] break-all">{r.payment?.paymentId}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[9px] opacity-60 mb-1">Amount Paid</p>
+                                                                <p className="font-mono font-bold">₹ {r.payment?.amount ? (r.payment.amount / 100).toFixed(2) : '0.00'}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[9px] opacity-60 mb-1">Payment Time</p>
+                                                                <p className="font-mono text-[10px]">{r.payment?.timestamp ? new Date(r.payment.timestamp).toLocaleDateString() : 'N/A'}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>

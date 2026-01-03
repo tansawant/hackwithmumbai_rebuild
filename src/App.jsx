@@ -1046,14 +1046,14 @@ export default function App() {
                                 </div>
 
                                 {/* MUMBAI - Solid Style */}
-                                <div className={`flex items-center gap-8 md:gap-12 text-5xl md:text-8xl font-black uppercase tracking-tight leading-[0.9] ${theme.fonts.head} relative z-10 mix-blend-difference`}>
+                                <div className={`flex items-center gap-8 md:gap-12 text-5xl md:text-8xl font-black uppercase tracking-tight leading-[0.9] ${theme.fonts.head} relative z-10`}>
                                     <FlickerText
                                         text="MUMBAI"
-                                        textColor={dimension === 'rift' ? '#b91c1c' : '#06b6d4'}
+                                        textColor={dimension === 'rift' ? '#ef4444' : '#06b6d4'}
                                         glowColor={dimension === 'rift' ? '#ef4444' : '#06b6d4'}
                                         backgroundColor="transparent"
                                         showBackground={false}
-                                        strokeWidth={0}
+                                        strokeWidth={1}
                                         animationSpeed={0.5}
                                         animationStyle="neon"
                                     />
@@ -1193,7 +1193,7 @@ export default function App() {
                                 <p className="opacity-60 mb-10 text-base">Strict adherence to the HackwithMumbai2.0 protocol is mandatory. Failure to comply will result in immediate disqualification. Review the mission directives carefully.</p>
 
                                 <div className="flex flex-col md:flex-row justify-center gap-6">
-                                    <ThemeButton theme={theme} onClick={() => window.open('https://docs.google.com/document/u/0/?tgif=d', '_blank')}>
+                                    <ThemeButton theme={theme} onClick={() => window.open('/hackwithmumbai/HACK WITH MUMBAI 2.0 Participant\'s brochure.pdf', '_blank')}>
                                         <Download className="w-4 h-4" /> Download Rulebook
                                     </ThemeButton>
 

@@ -18,6 +18,7 @@ const APP_NAME = "HackwithMumbai2.0";
 const TARGET_DATE = new Date("2026-02-07T00:00:00");
 const REG_FEE = 2000;
 const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_RznmKrzlCljxVW";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
 // --- UTILS ---
 const loadScript = (src) => {
@@ -674,11 +675,11 @@ export default function App() {
     // --- REALTIME DATA (FROM BACKEND) ---
     useEffect(() => {
         if (!adminAuth.isAuthenticated) return;
-        
+
         // Fetch registrations from backend
         const fetchRegistrations = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/registrations');
+                const response = await fetch(`${BACKEND_URL}/api/registrations`);
                 if (response.ok) {
                     const data = await response.json();
                     setRegistrations(data);
@@ -693,9 +694,9 @@ export default function App() {
                 setRegistrations([]);
             }
         };
-        
+
         fetchRegistrations();
-        
+
         // Refresh every 5 seconds to see new registrations
         const interval = setInterval(fetchRegistrations, 5000);
         return () => clearInterval(interval);
@@ -785,11 +786,11 @@ export default function App() {
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         const timestamp = new Date().toISOString().slice(0, 10);
-        
+
         link.setAttribute('href', url);
         link.setAttribute('download', `HackWithMumbai_Registrations_${timestamp}.csv`);
         link.style.visibility = 'hidden';
-        
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -804,22 +805,22 @@ export default function App() {
                 setLoading(false);
                 return;
             }
-            
+
             if (!formData.leader.email || !formData.leader.email.trim()) {
                 alert("❌ Please enter leader email");
                 setLoading(false);
                 return;
             }
-            
+
             if (!formData.leader.name || !formData.leader.name.trim()) {
                 alert("❌ Please enter leader name");
                 setLoading(false);
                 return;
             }
-            
+
             // Load Razorpay script
             const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
-            
+
             if (!res) {
                 alert("Failed to load Razorpay. Please try again.");
                 setLoading(false);
@@ -828,11 +829,11 @@ export default function App() {
 
             // Calculate amount based on team size
             const amount = calculateRegistrationFee(formData.teamSize);
-            
+
             // Create order from backend
             let orderResponse;
             try {
-                orderResponse = await fetch('http://localhost:5000/api/create-order', {
+                orderResponse = await fetch(`${BACKEND_URL}/api/create-order`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -889,7 +890,7 @@ export default function App() {
                 handler: async (response) => {
                     // Verify payment on backend
                     try {
-                        const verifyResponse = await fetch('http://localhost:5000/api/verify-payment', {
+                        const verifyResponse = await fetch(`${BACKEND_URL}/api/verify-payment`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -1423,15 +1424,15 @@ export default function App() {
                                 <p className={`${theme.colors.accent} text-[10px] font-bold uppercase tracking-widest mt-2`}>{registrations.length} Registered Squads</p>
                             </div>
                             <div className="flex gap-3 w-full md:w-auto">
-                                <button 
-                                    onClick={downloadRegistrationsCSV} 
+                                <button
+                                    onClick={downloadRegistrationsCSV}
                                     disabled={registrations.length === 0}
                                     className={`flex items-center gap-2 px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-all ${registrations.length === 0 ? 'opacity-50 cursor-not-allowed bg-white/5' : 'bg-green-900/30 border border-green-900/50 text-green-400 hover:bg-green-900/50'}`}
                                 >
                                     <FileDown className="w-4 h-4" /> Download CSV
                                 </button>
-                                <button 
-                                    onClick={() => { setAdminAuth({ email: '', pass: '', isAuthenticated: false }); setView('home'); }} 
+                                <button
+                                    onClick={() => { setAdminAuth({ email: '', pass: '', isAuthenticated: false }); setView('home'); }}
                                     className={`${theme.colors.accent} font-bold uppercase text-[10px] tracking-widest hover:text-white px-4 py-2`}
                                 >
                                     Logout
@@ -1476,7 +1477,7 @@ export default function App() {
 
                                             <div className="border-t border-white/10 pt-4 mt-4">
                                                 <h4 className={`text-[9px] ${theme.colors.accent} uppercase font-bold tracking-widest mb-3`}>Registration Details</h4>
-                                                
+
                                                 {/* Leader Details */}
                                                 <div className="bg-black/50 p-4 rounded mb-4">
                                                     <h5 className="text-white font-bold text-sm mb-2">Team Leader</h5>

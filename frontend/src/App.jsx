@@ -17,7 +17,7 @@ import {
 const APP_NAME = "HackwithMumbai2.0";
 const TARGET_DATE = new Date("2026-02-07T00:00:00");
 const REG_FEE = 2000;
-const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_RyEAE0jIXPrkrw";
+const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_RznmKrzlCljxVW";
 
 // --- UTILS ---
 const loadScript = (src) => {

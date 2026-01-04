@@ -32,6 +32,11 @@ if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
 // Store registrations (in production, use a database)
 const registrations = [];
 
+// Root Route
+app.get('/', (req, res) => {
+  res.send('HackWithMumbai Backend is Running! 🚀');
+});
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Backend is running' });

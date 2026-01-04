@@ -17,19 +17,17 @@ app.use(cors());
 app.use(express.json());
 
 // Check if required credentials exist
-if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-  console.error('❌ Error: RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not found in .env file');
-  console.error('Please add your Razorpay credentials to .env file');
-  process.exit(1);
+let razorpay = null;
+if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+  console.log('✅ Razorpay credentials loaded');
+  razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+  });
+} else {
+  console.warn('⚠️  Warning: RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not found in .env file');
+  console.warn('⚠️  Payment functionality will not work. Please add your Razorpay credentials to .env file');
 }
-
-console.log('✅ Razorpay credentials loaded');
-
-// Razorpay Instance
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
 
 // Store registrations (in production, use a database)
 const registrations = [];
@@ -42,6 +40,13 @@ app.get('/api/health', (req, res) => {
 // Create Razorpay Order
 app.post('/api/create-order', async (req, res) => {
   try {
+    if (!razorpay) {
+      return res.status(503).json({
+        success: false,
+        error: 'Razorpay credentials not configured. Please add credentials to .env file'
+      });
+    }
+
     const { amount, teamName, teamSize, leaderEmail } = req.body;
 
     if (!amount || !teamName) {
@@ -80,6 +85,13 @@ app.post('/api/create-order', async (req, res) => {
 // Verify Payment
 app.post('/api/verify-payment', (req, res) => {
   try {
+    if (!razorpay) {
+      return res.status(503).json({
+        success: false,
+        error: 'Razorpay credentials not configured'
+      });
+    }
+
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, registrationData } = req.body;
 
     // Verify signature

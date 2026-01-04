@@ -5,9 +5,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently npm:dev:frontend npm:server",
-    "dev:frontend": "vite",
-    "server": "node server.js",
+    "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

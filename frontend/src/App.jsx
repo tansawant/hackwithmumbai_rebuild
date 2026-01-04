@@ -1066,7 +1066,7 @@ export default function App() {
 
                             <div className="flex flex-col md:flex-row gap-4 mt-6">
                                 <ThemeButton theme={theme} onClick={() => setView('register')}>Start Registration</ThemeButton>
-                                <ThemeButton theme={theme} variant="secondary" onClick={() => window.open('https://discord.gg', '_blank')}>Join Community</ThemeButton>
+                                <ThemeButton theme={theme} variant="secondary" onClick={() => window.open('https://chat.whatsapp.com/G6MasRM8AK08WJq7KDifNq', '_blank')}>Join Community</ThemeButton>
                             </div>
                         </header>
 

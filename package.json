@@ -1,0 +1,16 @@
+{
+  "name": "hackwithmumbai-rebuild",
+  "version": "1.0.0",
+  "description": "Hack with Mumbai - Full Stack Application",
+  "scripts": {
+    "dev": "concurrently \"npm --prefix frontend run dev\" \"npm --prefix backend run dev\"",
+    "frontend": "npm --prefix frontend run dev",
+    "backend": "npm --prefix backend run dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

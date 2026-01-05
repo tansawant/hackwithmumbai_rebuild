@@ -804,6 +804,11 @@ export default function App() {
     paymentId: "",
   });
 
+  // Backend URL helper: set VITE_BACKEND_URL in frontend deployment (Vercel) to your backend URL.
+  // If not set, requests use same-origin paths like `/api/create-order`.
+  const API_BASE = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
+  const api = (path) => (API_BASE ? `${API_BASE}${path}` : path);
+
   // --- MOCK INITIALIZATION ---
   useEffect(() => {
     // Simulate checking auth state
@@ -819,7 +824,7 @@ export default function App() {
         // Fetch registrations from backend
         const fetchRegistrations = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/registrations');
+                const response = await fetch(api('/api/registrations'));
                 if (response.ok) {
                     const data = await response.json();
                     setRegistrations(data);
@@ -998,7 +1003,7 @@ export default function App() {
             // Create order from backend
             let orderResponse;
             try {
-                orderResponse = await fetch('http://localhost:5000/api/create-order', {
+                orderResponse = await fetch(api('/api/create-order'), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1011,10 +1016,11 @@ export default function App() {
                     })
                 });
             } catch (fetchError) {
-                console.error("Fetch error:", fetchError);
-                alert('❌ Backend server not running! Please start the server with: npm run server');
-                setLoading(false);
-                return;
+              console.error("Fetch error:", fetchError);
+              const attempted = api('/api/create-order');
+              alert(`❌ Backend unreachable at ${attempted}. Ensure your backend is deployed and set VITE_BACKEND_URL in the frontend deployment to the backend URL (or deploy backend under same origin).`);
+              setLoading(false);
+              return;
             }
 
       if (!orderResponse.ok) {
@@ -1060,7 +1066,7 @@ export default function App() {
                 handler: async (response) => {
                     // Verify payment on backend
                     try {
-                        const verifyResponse = await fetch('http://localhost:5000/api/verify-payment', {
+                        const verifyResponse = await fetch(api('/api/verify-payment'), {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'

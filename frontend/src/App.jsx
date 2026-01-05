@@ -53,6 +53,8 @@ import {
   Play,
   MessageCircle,
 } from "lucide-react";
+
+import logo from "./assets/hwi_logo.jpg";
 // Mock Data Imports or internal definitions handled below
 
 // --- CONFIGURATION ---
@@ -1199,7 +1201,7 @@ export default function App() {
             >
               <div className="absolute inset-0 bg-red-600/60 blur-[6px] rounded-full animate-pulse"></div>
               <img
-                src="/hackwithmumbai/hwi_logo.jpg"
+                src={logo}
                 alt="HWI"
                 className="w-6 h-6 object-contain rounded-full relative z-10 animate-pulse-red-glow"
               />
@@ -2423,7 +2425,7 @@ export default function App() {
               >
                 <div className="absolute inset-0 bg-red-600/60 blur-[6px] rounded-full animate-pulse"></div>
                 <img
-                  src="/hackwithmumbai/hwi_logo.jpg"
+                  src={logo}
                   alt="HWI"
                   className="w-6 h-6 object-contain rounded-full relative z-10 animate-pulse-red-glow"
                 />

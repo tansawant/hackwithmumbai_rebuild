@@ -1588,7 +1588,7 @@ export default function App() {
                     theme={theme}
                     onClick={() =>
                       window.open(
-                        "/hackwithmumbai/HACK WITH MUMBAI 2.0 Participant's brochure.pdf",
+                        "/HACK WITH MUMBAI 2.0 Participant's brochure.pdf",
                         "_blank"
                       )
                     }
